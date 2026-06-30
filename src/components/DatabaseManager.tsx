@@ -3,6 +3,18 @@
 import { useState, useCallback } from 'react'
 import { searchDatabase, updateSpotifyId } from '@/app/database/actions'
 import Link from 'next/link'
+import {
+  ArrowLeft,
+  Search,
+  Loader2,
+  Music2,
+  ExternalLink,
+  Pencil,
+  Check,
+  X,
+  AlertCircle,
+  Database,
+} from 'lucide-react'
 
 type TableType = 'canciones' | 'mapeos_manuales' | 'ambas'
 
@@ -12,50 +24,97 @@ interface DBRow {
   _table?: 'canciones' | 'mapeos_manuales'
 }
 
+const TAB_CONFIG: { id: TableType; label: string; short: string }[] = [
+  { id: 'canciones',       label: 'Canciones',       short: 'C' },
+  { id: 'mapeos_manuales', label: 'Mapeos Manuales', short: 'M' },
+  { id: 'ambas',           label: 'Ambas',            short: 'A' },
+]
+
+// ── Inline styles as constants to avoid repetition ──────────────────────────
+
+const btnBase: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: 'none',
+  cursor: 'pointer',
+  transition: 'all 0.15s ease',
+  fontFamily: "inherit",
+}
+
+// ── Sub-components ──────────────────────────────────────────────────────────
+
 function SpotifyLink({ id }: { id: string | null }) {
-  if (!id) return <span style={{ color: 'var(--muted)', fontSize: 13 }}>(vacío)</span>
+  if (!id) {
+    return (
+      <span style={{ color: 'var(--muted)', fontSize: 12, fontStyle: 'italic' }}>
+        Sin ID asignado
+      </span>
+    )
+  }
   return (
     <a
       href={`https://open.spotify.com/track/${id}`}
       target="_blank"
       rel="noopener noreferrer"
       style={{
-        color: 'var(--spotify-green)',
-        fontFamily: 'monospace',
-        fontSize: 13,
-        textDecoration: 'none',
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '2px 8px',
-        background: 'rgba(29,185,84,0.08)',
+        gap: 5,
+        color: 'var(--spotify-green)',
+        fontFamily: 'monospace',
+        fontSize: 12,
+        textDecoration: 'none',
+        padding: '3px 10px',
+        background: 'rgba(29,185,84,0.07)',
+        border: '1px solid rgba(29,185,84,0.18)',
         borderRadius: 6,
-        border: '1px solid rgba(29,185,84,0.2)',
-        transition: 'background 0.2s',
+        maxWidth: '100%',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
       }}
     >
-      <span style={{ fontSize: 11 }}>♪</span>
-      {id}
-      <span style={{ fontSize: 10, opacity: 0.6 }}>↗</span>
+      <Music2 size={11} />
+      <span>{id}</span>
+      <ExternalLink size={10} style={{ opacity: 0.5, flexShrink: 0 }} />
     </a>
   )
 }
 
-const TAB_LABELS: Record<TableType, string> = {
-  canciones: 'Canciones',
-  mapeos_manuales: 'Mapeos Manuales',
-  ambas: 'Ambas',
+function TableBadge({ table }: { table: 'canciones' | 'mapeos_manuales' | undefined }) {
+  if (!table) return null
+  const isCancion = table === 'canciones'
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        padding: '2px 8px',
+        borderRadius: 99,
+        background: isCancion ? 'rgba(29,185,84,0.12)' : 'rgba(124,58,237,0.15)',
+        color: isCancion ? 'var(--spotify-green)' : 'var(--purple-light)',
+        flexShrink: 0,
+      }}
+    >
+      {isCancion ? 'Canción' : 'Mapeo'}
+    </span>
+  )
 }
 
+// ── Main component ──────────────────────────────────────────────────────────
+
 export default function DatabaseManager() {
-  const [activeTab, setActiveTab] = useState<TableType>('canciones')
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<DBRow[]>([])
-  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab]   = useState<TableType>('canciones')
+  const [query, setQuery]           = useState('')
+  const [results, setResults]       = useState<DBRow[]>([])
+  const [loading, setLoading]       = useState(false)
   const [editingRow, setEditingRow] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [editValue, setEditValue]   = useState('')
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState<string | null>(null)
 
   const handleSearch = useCallback(async () => {
     const q = query.trim()
@@ -76,17 +135,17 @@ export default function DatabaseManager() {
           ...((resM.success && resM.data) ? resM.data.map(r => ({ ...r, _table: 'mapeos_manuales' as const })) : []),
         ]
         setResults(combined)
-        if (!resC.success && !resM.success) setError('Error al buscar en ambas tablas')
+        if (!resC.success && !resM.success) setError('No se pudo conectar con Supabase')
       } else {
         const res = await searchDatabase(activeTab, q)
         if (res.success && res.data) {
           setResults(res.data.map(r => ({ ...r, _table: activeTab })))
         } else {
-          setError(res.error || 'Error al buscar')
+          setError(res.error ?? 'Error al buscar')
         }
       }
     } catch {
-      setError('Error inesperado')
+      setError('Error inesperado al buscar')
     } finally {
       setLoading(false)
     }
@@ -100,12 +159,11 @@ export default function DatabaseManager() {
     setEditingRow(null)
   }
 
-  // Unique key per row: table+nombre_busqueda
   const rowKey = (row: DBRow) => `${row._table}::${row.nombre_busqueda}`
 
   const startEditing = (row: DBRow) => {
     setEditingRow(rowKey(row))
-    setEditValue(row.spotify_id || '')
+    setEditValue(row.spotify_id ?? '')
   }
 
   const saveEdit = async (row: DBRow) => {
@@ -113,20 +171,13 @@ export default function DatabaseManager() {
     setSaving(true)
     const res = await updateSpotifyId(table, row.nombre_busqueda, editValue)
     if (res.success) {
-      setResults(prev =>
-        prev.map(r =>
-          rowKey(r) === rowKey(row) ? { ...r, spotify_id: editValue } : r
-        )
-      )
+      setResults(prev => prev.map(r => rowKey(r) === rowKey(row) ? { ...r, spotify_id: editValue } : r))
       setEditingRow(null)
     } else {
-      setError(res.error || 'Error al actualizar')
+      setError(res.error ?? 'Error al actualizar')
     }
     setSaving(false)
   }
-
-  const tableLabel = (row: DBRow) =>
-    row._table === 'canciones' ? 'Canciones' : row._table === 'mapeos_manuales' ? 'Mapeo' : ''
 
   return (
     <div
@@ -139,246 +190,323 @@ export default function DatabaseManager() {
         fontFamily: "var(--font-inter, 'Inter', sans-serif)",
       }}
     >
-      {/* Animated background (fixed so it stays put while scrolling) */}
       <div className="bg-animated" />
 
       <div
         style={{
           position: 'relative',
           zIndex: 1,
-          maxWidth: 760,
+          maxWidth: 720,
           margin: '0 auto',
-          padding: '20px 20px 48px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20,
+          padding: '28px 24px 64px',
         }}
       >
-        {/* Header */}
-        <div className="header">
-          <div className="header-logo">
-            <Link
-              href="/"
-              style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: 10 }}
+        {/* ── Header ─────────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
+          <Link
+            href="/"
+            style={{
+              ...btnBase,
+              width: 36,
+              height: 36,
+              background: 'var(--surface2)',
+              borderRadius: 10,
+              color: 'var(--muted)',
+              flexShrink: 0,
+            }}
+          >
+            <ArrowLeft size={16} />
+          </Link>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, var(--purple), var(--spotify-green))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
             >
-              <div
-                className="logo-icon"
-                style={{ background: 'var(--surface2)', fontSize: 14, flexShrink: 0 }}
-              >
-                ←
-              </div>
-              <div>
-                <div className="logo-title">Base de Datos</div>
-                <div className="logo-sub">Gestor de IDs</div>
-              </div>
-            </Link>
+              <Database size={16} color="white" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>Base de Datos</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>Busca y edita IDs de Spotify</div>
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {(['canciones', 'mapeos_manuales', 'ambas'] as TableType[]).map(tab => (
+        {/* ── Tabs ────────────────────────────────────────────────────────── */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 4,
+            background: 'var(--surface)',
+            padding: 4,
+            borderRadius: 12,
+            marginBottom: 20,
+            border: '1px solid var(--border)',
+          }}
+        >
+          {TAB_CONFIG.map(tab => (
             <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
               style={{
-                padding: '8px 18px',
-                borderRadius: 20,
-                border: 'none',
-                background:
-                  activeTab === tab ? 'rgba(124,58,237,0.25)' : 'var(--surface2)',
-                color: activeTab === tab ? 'var(--purple-light)' : 'var(--muted)',
-                cursor: 'pointer',
-                fontWeight: 600,
+                ...btnBase,
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: activeTab === tab.id ? 'var(--surface2)' : 'transparent',
+                color: activeTab === tab.id ? 'var(--text)' : 'var(--muted)',
+                fontWeight: activeTab === tab.id ? 600 : 400,
                 fontSize: 13,
-                transition: 'all 0.2s ease',
-                outline: activeTab === tab ? '1px solid rgba(124,58,237,0.4)' : 'none',
+                boxShadow: activeTab === tab.id ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
               }}
             >
-              {TAB_LABELS[tab]}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Search bar */}
-        <div className="search-input-wrap">
+        {/* ── Search bar ──────────────────────────────────────────────────── */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            marginBottom: 20,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: '6px 6px 6px 14px',
+            alignItems: 'center',
+          }}
+        >
+          <Search size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />
           <input
-            className="search-input"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            placeholder={`Buscar en ${TAB_LABELS[activeTab].toLowerCase()}…`}
+            placeholder="Buscar por título…"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'var(--text)',
+              fontSize: 14,
+              fontFamily: 'inherit',
+            }}
           />
-          <button className="search-go-btn" onClick={handleSearch} disabled={loading}>
-            {loading ? '…' : 'Buscar'}
+          <button
+            onClick={handleSearch}
+            disabled={loading || !query.trim()}
+            style={{
+              ...btnBase,
+              padding: '8px 14px',
+              borderRadius: 8,
+              background: loading || !query.trim() ? 'var(--surface2)' : 'var(--purple)',
+              color: loading || !query.trim() ? 'var(--muted)' : 'white',
+              fontSize: 13,
+              fontWeight: 600,
+              gap: 10,
+            }}
+          >
+            {loading
+              ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              : <Search size={14} />
+            }
+            {loading ? 'Buscando' : 'Buscar'}
           </button>
         </div>
 
-        {/* Error */}
+        {/* Spin animation */}
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+        {/* ── Error ───────────────────────────────────────────────────────── */}
         {error && (
           <div
             style={{
-              padding: 12,
-              background: 'rgba(255,50,50,0.1)',
-              color: '#ff6b6b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 14px',
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.2)',
               borderRadius: 10,
-              fontSize: 14,
+              color: '#f87171',
+              fontSize: 13,
+              marginBottom: 16,
             }}
           >
+            <AlertCircle size={15} style={{ flexShrink: 0 }} />
             {error}
           </div>
         )}
 
-        {/* Results */}
-        <div
-          style={{
-            background: 'var(--surface)',
-            borderRadius: 16,
-            border: '1px solid var(--border)',
-            overflow: 'hidden',
-          }}
-        >
-          {results.length === 0 && !loading && (
-            <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>
-              {query.trim() ? 'Sin resultados para esa búsqueda' : 'Realiza una búsqueda para ver resultados'}
-            </div>
-          )}
+        {/* ── Results ─────────────────────────────────────────────────────── */}
+        {loading && (
+          <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+            <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 10px', display: 'block' }} />
+            Buscando en {TAB_CONFIG.find(t => t.id === activeTab)?.label.toLowerCase()}…
+          </div>
+        )}
 
-          {loading && (
-            <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>
-              Buscando…
-            </div>
-          )}
-
-          {results.map(row => {
-            const key = rowKey(row)
-            const isEditing = editingRow === key
-            return (
-              <div
-                key={key}
-                style={{
-                  padding: '14px 18px',
-                  borderBottom: '1px solid var(--border)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                }}
-              >
-                {/* Title row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>
-                    {row.nombre_busqueda}
-                  </span>
-                  {activeTab === 'ambas' && (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: '2px 7px',
-                        borderRadius: 99,
-                        background:
-                          row._table === 'canciones'
-                            ? 'rgba(29,185,84,0.15)'
-                            : 'rgba(124,58,237,0.2)',
-                        color:
-                          row._table === 'canciones'
-                            ? 'var(--spotify-green)'
-                            : 'var(--purple-light)',
-                      }}
-                    >
-                      {tableLabel(row)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Spotify ID row */}
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--muted)', fontSize: 12, flexShrink: 0 }}>
-                    Spotify ID:
-                  </span>
-
-                  {isEditing ? (
-                    <>
-                      <input
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && saveEdit(row)}
-                        autoFocus
-                        placeholder="spotify_id o link completo"
-                        style={{
-                          flex: 1,
-                          minWidth: 180,
-                          background: 'var(--surface2)',
-                          border: '1px solid rgba(124,58,237,0.5)',
-                          color: 'white',
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          fontSize: 13,
-                          outline: 'none',
-                        }}
-                      />
-                      <button
-                        onClick={() => saveEdit(row)}
-                        disabled={saving}
-                        style={{
-                          background: 'var(--spotify-green)',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 14px',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontWeight: 700,
-                          fontSize: 13,
-                        }}
-                      >
-                        {saving ? '…' : 'Guardar'}
-                      </button>
-                      <button
-                        onClick={() => setEditingRow(null)}
-                        style={{
-                          background: 'var(--surface2)',
-                          color: 'var(--muted)',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontSize: 13,
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <SpotifyLink id={row.spotify_id} />
-                      <button
-                        onClick={() => startEditing(row)}
-                        style={{
-                          background: 'var(--surface2)',
-                          color: 'var(--text)',
-                          border: 'none',
-                          padding: '4px 12px',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          marginLeft: 'auto',
-                        }}
-                      >
-                        Editar
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        {!loading && results.length === 0 && (
+          <div
+            style={{
+              padding: '48px 0',
+              textAlign: 'center',
+              color: 'var(--muted)',
+              fontSize: 13,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Search size={28} style={{ opacity: 0.2 }} />
+            {query.trim() ? 'Sin resultados para esa búsqueda' : 'Escribe algo para buscar'}
+          </div>
+        )}
 
         {results.length > 0 && (
-          <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>
-            {results.length} resultado{results.length !== 1 ? 's' : ''}
-          </p>
+          <>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--muted)',
+                marginBottom: 10,
+                display: 'flex',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span>{results.length} resultado{results.length !== 1 ? 's' : ''}</span>
+              <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {TAB_CONFIG.find(t => t.id === activeTab)?.label}
+              </span>
+            </div>
+
+            <div
+              style={{
+                background: 'var(--surface)',
+                borderRadius: 14,
+                border: '1px solid var(--border)',
+                overflow: 'hidden',
+              }}
+            >
+              {results.map((row, idx) => {
+                const key = rowKey(row)
+                const isEditing = editingRow === key
+                const isLast = idx === results.length - 1
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      padding: '14px 16px',
+                      borderBottom: isLast ? 'none' : '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
+                  >
+                    {/* Title row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Music2 size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, fontSize: 13, flex: 1, lineHeight: 1.3 }}>
+                        {row.nombre_busqueda}
+                      </span>
+                      {activeTab === 'ambas' && <TableBadge table={row._table} />}
+                    </div>
+
+                    {/* ID row */}
+                    {isEditing ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && saveEdit(row)}
+                          autoFocus
+                          placeholder="spotify_id o URL de Spotify"
+                          style={{
+                            flex: 1,
+                            minWidth: 180,
+                            background: 'var(--surface2)',
+                            border: '1px solid rgba(124,58,237,0.4)',
+                            color: 'var(--text)',
+                            padding: '7px 12px',
+                            borderRadius: 8,
+                            fontSize: 13,
+                            outline: 'none',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                        <button
+                          onClick={() => saveEdit(row)}
+                          disabled={saving}
+                          style={{
+                            ...btnBase,
+                            padding: '7px 14px',
+                            borderRadius: 8,
+                            background: 'var(--spotify-green)',
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: 13,
+                            gap: 5,
+                          }}
+                        >
+                          {saving
+                            ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                            : <Check size={13} />
+                          }
+                          {saving ? 'Guardando' : 'Guardar'}
+                        </button>
+                        <button
+                          onClick={() => setEditingRow(null)}
+                          style={{
+                            ...btnBase,
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            background: 'var(--surface2)',
+                            color: 'var(--muted)',
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <SpotifyLink id={row.spotify_id} />
+                        <button
+                          onClick={() => startEditing(row)}
+                          style={{
+                            ...btnBase,
+                            marginLeft: 'auto',
+                            gap: 5,
+                            padding: '5px 11px',
+                            borderRadius: 8,
+                            background: 'var(--surface2)',
+                            color: 'var(--muted)',
+                            fontSize: 12,
+                            fontWeight: 500,
+                          }}
+                        >
+                          <Pencil size={12} />
+                          Editar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>

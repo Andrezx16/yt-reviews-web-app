@@ -3,6 +3,23 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import Link from 'next/link'
+import {
+  Music2,
+  Database,
+  Search,
+  X,
+  Check,
+  ChevronRight,
+  AlertTriangle,
+  RefreshCw,
+  HelpCircle,
+  Play,
+  Pause,
+  PlayCircle,
+  PartyPopper,
+  Loader2,
+  ListTodo,
+} from 'lucide-react'
 import type { SpotifyTrack } from '@/lib/spotify'
 
 interface PendingTrack {
@@ -39,7 +56,6 @@ function SearchModal({
     setSearched(false)
     try {
       const params = new URLSearchParams({ title: track.title, artist: track.artist })
-      // If user changed the query significantly, use that as a raw query
       const url = query !== `${track.title} ${track.artist}`
         ? `/api/search?title=${encodeURIComponent(query)}&artist=`
         : `/api/search?${params}`
@@ -78,10 +94,25 @@ function SearchModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-handle" />
-        <div className="modal-title">Buscar en Spotify</div>
-        <div className="modal-subtitle">
-          YTM: <strong>{track.artist} — {track.title}</strong>
+
+        {/* Modal header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: 'rgba(29,185,84,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Search size={15} color="var(--spotify-green)" />
+          </div>
+          <div>
+            <div className="modal-title" style={{ marginBottom: 0 }}>Buscar en Spotify</div>
+            <div className="modal-subtitle" style={{ marginBottom: 0 }}>
+              {track.artist} — <strong>{track.title}</strong>
+            </div>
+          </div>
         </div>
+
+        <div style={{ height: 16 }} />
 
         <div className="search-input-wrap">
           <input
@@ -98,8 +129,13 @@ function SearchModal({
             className="search-go-btn"
             onClick={doSearch}
             disabled={loading}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            {loading ? '…' : 'Buscar'}
+            {loading
+              ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              : <Search size={14} />
+            }
+            {loading ? 'Buscando' : 'Buscar'}
           </button>
         </div>
 
@@ -109,10 +145,12 @@ function SearchModal({
 
         <div className="results-list">
           {results.map((r, i) => (
-            <div key={r.id} className="result-item">
+            <div key={r.id} className="result-item" onClick={() => onChoose(r.id)}>
               {r.image
                 ? <img src={r.image} className="result-img" alt={r.album} />
-                : <div className="result-img" style={{ background: 'var(--surface)' }} />
+                : <div className="result-img" style={{ background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Music2 size={18} color="var(--muted)" />
+                  </div>
               }
               <div className="result-info">
                 <div className="result-name">{r.name}</div>
@@ -124,7 +162,7 @@ function SearchModal({
                 className="result-choose-btn"
                 onClick={() => onChoose(r.id)}
               >
-                ✓
+                <Check size={13} />
               </button>
             </div>
           ))}
@@ -154,13 +192,18 @@ function SearchModal({
                 if (parsed) onChoose(parsed)
               }}
               disabled={!manualId.trim()}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
             >
+              <Check size={14} />
               OK
             </button>
           </div>
         </div>
 
-        <button id="modal-close-btn" className="modal-close-btn" onClick={onClose}>
+        <button id="modal-close-btn" className="modal-close-btn" onClick={onClose}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        >
+          <X size={15} />
           Cancelar
         </button>
       </motion.div>
@@ -199,6 +242,34 @@ function useAudioPreview() {
   return { playing, toggle, stop }
 }
 
+// ─── Reason badge config ──────────────────────────────────────────────────────
+
+const REASON_META: Record<string, {
+  label: string
+  Icon: React.FC<{ size?: number }>
+  cls: string
+  dotColor: string
+}> = {
+  fuzzy_title_match: {
+    label: 'Match por título',
+    Icon: ({ size }) => <AlertTriangle size={size} />,
+    cls: 'reason-fuzzy',
+    dotColor: '#f59e0b',
+  },
+  duplicate_id: {
+    label: 'ID duplicado',
+    Icon: ({ size }) => <RefreshCw size={size} />,
+    cls: 'reason-dup',
+    dotColor: '#ef4444',
+  },
+  not_found: {
+    label: 'No encontrada',
+    Icon: ({ size }) => <HelpCircle size={size} />,
+    cls: 'reason-miss',
+    dotColor: 'var(--muted)',
+  },
+}
+
 // ─── Swipeable Card ──────────────────────────────────────────────────────────
 
 function SwipeCard({
@@ -225,12 +296,12 @@ function SwipeCard({
 
   const sp = track.spotifyTrack
 
-  const reasonMeta: Record<string, { label: string; icon: string; cls: string }> = {
-    fuzzy_title_match: { label: 'Match por título', icon: '⚠️', cls: 'reason-fuzzy' },
-    duplicate_id:      { label: 'ID duplicado',     icon: '🔁', cls: 'reason-dup' },
-    not_found:         { label: 'No encontrada',    icon: '✗',  cls: 'reason-miss' },
+  const rm = REASON_META[track.reason] ?? {
+    label: track.reason,
+    Icon: ({ size }: { size?: number }) => <HelpCircle size={size} />,
+    cls: 'reason-miss',
+    dotColor: 'var(--muted)',
   }
-  const rm = reasonMeta[track.reason] ?? { label: track.reason, icon: '?', cls: 'reason-miss' }
 
   const handleDragEnd = (_event: unknown, info: { offset: { x: number } }) => {
     stop()
@@ -255,29 +326,35 @@ function SwipeCard({
       <div className="card-image-wrap">
         {sp?.image
           ? <img src={sp.image} alt={sp.album} draggable={false} />
-          : <div className="card-image-placeholder">🎵</div>
+          : <div className="card-image-placeholder">
+              <Music2 size={56} color="var(--muted)" style={{ opacity: 0.4 }} />
+            </div>
         }
         <div className="card-overlay" />
 
         {/* Reason badge */}
         <div className="card-image-badge">
-          <span className={`dot ${rm.cls}`} style={{ background: rm.cls === 'reason-fuzzy' ? '#f59e0b' : rm.cls === 'reason-dup' ? '#ef4444' : 'var(--muted)' }} />
-          {rm.icon} {rm.label}
+          <span className="dot" style={{ background: rm.dotColor }} />
+          <rm.Icon size={10} />
+          {rm.label}
         </div>
 
         {/* Swipe stamps */}
         <motion.div className="swipe-stamp accept" style={{ opacity: acceptOpacity }}>
-          ✓ Aceptar
+          <Check size={18} strokeWidth={3} />
+          Aceptar
         </motion.div>
         <motion.div className="swipe-stamp skip" style={{ opacity: skipOpacity }}>
-          ✗ Skip
+          <X size={18} strokeWidth={3} />
+          Skip
         </motion.div>
       </div>
 
       {/* Card body */}
       <div className="card-body">
         <div className="card-ytm-label">
-          <span>▶</span> YouTube Music
+          <PlayCircle size={11} />
+          YouTube Music
         </div>
         <div className="card-title">{track.title}</div>
         <div className="card-artist">{track.artist}</div>
@@ -286,7 +363,9 @@ function SwipeCard({
           <div className="card-suggestion">
             {sp.image
               ? <img src={sp.image} className="suggestion-thumb" alt={sp.album} />
-              : <div className="suggestion-thumb" />
+              : <div className="suggestion-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Music2 size={18} color="var(--muted)" />
+                </div>
             }
             <div className="suggestion-info">
               <div className="suggestion-name">{sp.name}</div>
@@ -300,7 +379,7 @@ function SwipeCard({
                 onClick={(e) => { e.stopPropagation(); toggle(sp.preview_url) }}
                 title="Preview"
               >
-                {playing ? '⏸' : '▶'}
+                {playing ? <Pause size={14} /> : <Play size={14} />}
               </button>
             )}
           </div>
@@ -358,7 +437,6 @@ export default function ReviewPage({
   const handleAccept = () => decide('accept')
   const handleSkip   = () => decide('skip')
   const handleNext   = () => {
-    // Move current track to the end without deciding
     setTracks((prev) => [...prev.slice(1), prev[0]])
   }
   const handleChoose = (id: string) => {
@@ -371,37 +449,47 @@ export default function ReviewPage({
 
   return (
     <>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div className="bg-animated" />
       <div className="app-shell">
 
         {/* Header */}
         <header className="header">
           <div className="header-logo">
-            <div className="logo-icon">🎵</div>
+            <div className="logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Music2 size={18} />
+            </div>
             <div>
               <div className="logo-title">YTMusic Review</div>
               <div className="logo-sub">YouTube Music → Spotify</div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {tracks.length > 0 && (
-              <div className="pill-badge">{tracks.length} pendientes</div>
+              <div className="pill-badge" title="Canciones pendientes">
+                <ListTodo size={14} />
+                <span>{tracks.length}</span>
+              </div>
             )}
-            <Link 
+            <Link
               href="/database"
               style={{
-                background: 'rgba(255,255,255,0.1)',
-                color: 'var(--text)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'var(--surface2)',
+                color: 'var(--muted)',
                 padding: '6px 12px',
-                borderRadius: '20px',
+                borderRadius: '10px',
                 fontSize: '12px',
-                fontWeight: 600,
+                fontWeight: 500,
                 textDecoration: 'none',
                 border: '1px solid var(--border)',
-                transition: 'background 0.2s'
+                transition: 'color 0.2s',
               }}
             >
-              Base de Datos
+              <Database size={13} />
+              BD
             </Link>
           </div>
         </header>
@@ -423,7 +511,9 @@ export default function ReviewPage({
         <div className="card-stage">
           {tracks.length === 0 ? (
             <div className="state-center">
-              <div className="state-icon">🎉</div>
+              <div className="state-icon">
+                <PartyPopper size={60} color="var(--spotify-green)" strokeWidth={1.5} />
+              </div>
               <div className="state-title">¡Todo al día!</div>
               <div className="state-sub">
                 No hay canciones pendientes de revisión.
@@ -432,7 +522,6 @@ export default function ReviewPage({
             </div>
           ) : (
             <AnimatePresence mode="popLayout">
-              {/* Render top 2 cards for depth effect */}
               {tracks.slice(0, 2).reverse().map((t, i, arr) => {
                 const isTop = i === arr.length - 1
                 return (
@@ -462,7 +551,9 @@ export default function ReviewPage({
               disabled={saving}
               title="No sincronizar esta canción"
             >
-              <div className="action-btn-circle skip-btn">✕</div>
+              <div className="action-btn-circle skip-btn">
+                <X size={24} strokeWidth={7} />
+              </div>
               <span className="action-btn-label">Skip</span>
             </button>
 
@@ -474,7 +565,9 @@ export default function ReviewPage({
               disabled={saving}
               title="Dejar para después"
             >
-              <div className="action-btn-circle next-btn">→</div>
+              <div className="action-btn-circle next-btn">
+                <ChevronRight size={24} strokeWidth={6} />
+              </div>
               <span className="action-btn-label">Después</span>
             </button>
 
@@ -486,7 +579,9 @@ export default function ReviewPage({
               disabled={saving}
               title="Buscar en Spotify"
             >
-              <div className="action-btn-circle search-btn">🔍</div>
+              <div className="action-btn-circle search-btn">
+                <Search size={24} strokeWidth={6} />
+              </div>
               <span className="action-btn-label">Buscar</span>
             </button>
 
@@ -498,7 +593,12 @@ export default function ReviewPage({
               disabled={saving || !current?.spotifyTrack}
               title="Aceptar sugerencia"
             >
-              <div className="action-btn-circle accept-btn">♥</div>
+              <div className="action-btn-circle accept-btn">
+                {saving
+                  ? <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
+                  : <Check size={24} strokeWidth={6} />
+                }
+              </div>
               <span className="action-btn-label">Aceptar</span>
             </button>
           </div>

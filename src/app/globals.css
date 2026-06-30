@@ -98,9 +98,12 @@ html, body {
   color: var(--spotify-green);
   border: 1px solid rgba(29,185,84,0.3);
   border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 12px;
+  padding: 6px 12px;
+  font-size: 13px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ── Progress bar ── */
@@ -330,13 +333,16 @@ html, body {
   top: 24px;
   padding: 8px 18px;
   border-radius: 12px;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   pointer-events: none;
   opacity: 0;
   border: 3px solid;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   transition: opacity 0.1s;
 }
 
@@ -361,6 +367,7 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 16px;
+  margin-bottom: 20px;
   padding: 14px 0 env(safe-area-inset-bottom, 20px);
 }
 
@@ -380,8 +387,7 @@ html, body {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: 2px solid;
-  font-size: 22px;
+  border: 5px solid;
   transition: background 0.2s, box-shadow 0.2s;
 }
 
@@ -398,8 +404,8 @@ html, body {
 }
 
 .action-btn-circle.search-btn {
-  width: 50px;
-  height: 50px;
+  width: 58px;
+  height: 58px;
   border-color: #f59e0b;
   color: #f59e0b;
 }
@@ -422,8 +428,8 @@ html, body {
 }
 
 .action-btn-circle.next-btn {
-  width: 44px;
-  height: 44px;
+  width: 58px;
+  height: 58px;
   border-color: var(--muted);
   color: var(--muted);
 }
@@ -446,7 +452,16 @@ html, body {
   padding: 40px 20px;
 }
 
-.state-icon { font-size: 64px; }
+.state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(29,185,84,0.08);
+  border: 1px solid rgba(29,185,84,0.15);
+}
 
 .state-title {
   font-size: 22px;
