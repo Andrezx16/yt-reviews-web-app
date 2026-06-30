@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
+import Link from 'next/link'
 import type { SpotifyTrack } from '@/lib/spotify'
 
 interface PendingTrack {
@@ -13,7 +14,7 @@ interface PendingTrack {
   spotifyTrack?: SpotifyTrack | null
 }
 
-interface SearchResult extends SpotifyTrack {}
+type SearchResult = SpotifyTrack
 
 // ─── Search Modal ────────────────────────────────────────────────────────────
 
@@ -231,7 +232,7 @@ function SwipeCard({
   }
   const rm = reasonMeta[track.reason] ?? { label: track.reason, icon: '?', cls: 'reason-miss' }
 
-  const handleDragEnd = (_: unknown, info: { offset: { x: number } }) => {
+  const handleDragEnd = (_event: unknown, info: { offset: { x: number } }) => {
     stop()
     if (info.offset.x > 120) onAccept()
     else if (info.offset.x < -120) onSkip()
@@ -382,9 +383,27 @@ export default function ReviewPage({
               <div className="logo-sub">YouTube Music → Spotify</div>
             </div>
           </div>
-          {tracks.length > 0 && (
-            <div className="pill-badge">{tracks.length} pendientes</div>
-          )}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {tracks.length > 0 && (
+              <div className="pill-badge">{tracks.length} pendientes</div>
+            )}
+            <Link 
+              href="/database"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                color: 'var(--text)',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                border: '1px solid var(--border)',
+                transition: 'background 0.2s'
+              }}
+            >
+              Base de Datos
+            </Link>
+          </div>
         </header>
 
         {/* Progress */}
