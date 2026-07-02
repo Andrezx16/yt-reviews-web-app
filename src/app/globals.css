@@ -138,25 +138,28 @@ html, body {
 .card-stage {
   flex: 1;
   position: relative;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 12px;
 }
 
 /* ── Track card ── */
 .track-card {
   position: absolute;
-  width: 100%;
+  width:100%;
   max-width: 400px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(145deg, rgba(26,26,38,0.95), rgba(18,18,26,0.98));
   border: 1px solid var(--border);
   border-radius: 24px;
   overflow: hidden;
   backdrop-filter: blur(20px);
   box-shadow:
-    0 20px 60px rgba(0,0,0,0.5),
-    0 0 0 1px rgba(255,255,255,0.04) inset;
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   cursor: grab;
   user-select: none;
   touch-action: none;
@@ -167,6 +170,8 @@ html, body {
 .card-image-wrap {
   position: relative;
   aspect-ratio: 1;
+  flex: 1 1 clamp(250px, 50vw, 400px);
+  min-height: 0;
   background: var(--surface);
   overflow: hidden;
 }
@@ -221,6 +226,7 @@ html, body {
 
 .card-body {
   padding: 16px 20px 20px;
+  flex-shrink: 0;
 }
 
 .card-reason {
@@ -366,9 +372,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 14px 0 env(safe-area-inset-bottom, 20px);
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .action-btn {
@@ -387,7 +392,7 @@ html, body {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: 5px solid;
+  border: 2px solid;
   transition: background 0.2s, box-shadow 0.2s;
 }
 

@@ -9,7 +9,7 @@ import {
   Search,
   X,
   Check,
-  ChevronRight,
+  Clock9,
   AlertTriangle,
   RefreshCw,
   HelpCircle,
@@ -552,7 +552,7 @@ export default function ReviewPage({
               title="No sincronizar esta canción"
             >
               <div className="action-btn-circle skip-btn">
-                <X size={24} strokeWidth={7} />
+                <X size={26} strokeWidth={3} />
               </div>
               <span className="action-btn-label">Skip</span>
             </button>
@@ -566,7 +566,7 @@ export default function ReviewPage({
               title="Dejar para después"
             >
               <div className="action-btn-circle next-btn">
-                <ChevronRight size={24} strokeWidth={6} />
+                <Clock9 size={27} strokeWidth={3} />
               </div>
               <span className="action-btn-label">Después</span>
             </button>
@@ -580,7 +580,7 @@ export default function ReviewPage({
               title="Buscar en Spotify"
             >
               <div className="action-btn-circle search-btn">
-                <Search size={24} strokeWidth={6} />
+                <Search size={24} strokeWidth={3} />
               </div>
               <span className="action-btn-label">Buscar</span>
             </button>
@@ -596,7 +596,7 @@ export default function ReviewPage({
               <div className="action-btn-circle accept-btn">
                 {saving
                   ? <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
-                  : <Check size={24} strokeWidth={6} />
+                  : <Check size={24} strokeWidth={3} />
                 }
               </div>
               <span className="action-btn-label">Aceptar</span>
